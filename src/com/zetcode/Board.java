@@ -11,23 +11,24 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.util.Random;
 import javax.swing.ImageIcon;
 import javax.swing.JPanel;
 import javax.swing.Timer;
 
 public class Board extends JPanel implements ActionListener {
-
-    private final int B_WIDTH = 300;
-    private final int B_HEIGHT = 300;
     private final int DOT_SIZE = 10;
-    private final int ALL_DOTS = 900;
-    private final int RAND_POS = 29;
-    private final int DELAY = 140;
+    private final int HORIZONTAL_DOTS = 50;
+    private final int VERTICAL_DOTS = 50;
+    private final int B_WIDTH = DOT_SIZE * HORIZONTAL_DOTS;
+    private final int B_HEIGHT = DOT_SIZE * VERTICAL_DOTS;
+    private final int ALL_DOTS = HORIZONTAL_DOTS * VERTICAL_DOTS;
+    private final int DELAY = 240;
 
-    private final int x[] = new int[ALL_DOTS];
-    private final int y[] = new int[ALL_DOTS];
+    private final int[] x = new int[ALL_DOTS];
+    private final int[] y = new int[ALL_DOTS];
 
-    private int dots;
+    private int worm_length;
     private int apple_x;
     private int apple_y;
 
@@ -72,14 +73,14 @@ public class Board extends JPanel implements ActionListener {
 
     private void initGame() {
 
-        dots = 3;
+        worm_length = 3;
 
-        for (int z = 0; z < dots; z++) {
-            x[z] = 50 - z * 10;
-            y[z] = 50;
+        for (int z = 0; z < worm_length; z++) {
+            x[z] = (HORIZONTAL_DOTS/2 - z) * DOT_SIZE;
+            y[z] = (VERTICAL_DOTS/2) * DOT_SIZE;
         }
         
-        locateApple();
+        relocateApple();
 
         timer = new Timer(DELAY, this);
         timer.start();
@@ -88,7 +89,6 @@ public class Board extends JPanel implements ActionListener {
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
-
         doDrawing(g);
     }
     
@@ -98,7 +98,7 @@ public class Board extends JPanel implements ActionListener {
 
             g.drawImage(apple, apple_x, apple_y, this);
 
-            for (int z = 0; z < dots; z++) {
+            for (int z = 0; z < worm_length; z++) {
                 if (z == 0) {
                     g.drawImage(head, x[z], y[z], this);
                 } else {
@@ -128,24 +128,66 @@ public class Board extends JPanel implements ActionListener {
     private void checkApple() {
 
         if ((x[0] == apple_x) && (y[0] == apple_y)) {
-
-            dots++;
-            locateApple();
+            worm_length++;
+            relocateApple();
         }
     }
 
     private void move() {
+        // 0123456789
+        //0
+        //1
+        //2
+        //3
+        //4
+        //5    *---
+        //6
+        // 01234
 
-        for (int z = dots; z > 0; z--) {
+        // worm_length=4
+        //    0 1 2 3 4
+        // x: 4 5 6 7
+        // y: 5 5 5 5
+
+        for (int z = worm_length; z > 0; z--) {
             x[z] = x[(z - 1)];
             y[z] = y[(z - 1)];
         }
 
+        // 0123456789
+        //0
+        //1
+        //2
+        //3
+        //4
+        //5    x--
+        //6
+        // 0123456
+
+        // worm_length=4
+        //    0 1 2 3 4
+        // x: 4 4 5 6 7
+        // y: 5 5 5 5 5
+
         if (leftDirection) {
             x[0] -= DOT_SIZE;
         }
+        // 0123456789
+        //0
+        //1
+        //2
+        //3
+        //4
+        //5   *---
+        //6
+        // 0123456
 
-        if (rightDirection) {
+        // worm_length=4
+        //    0 1 2 3 4
+        // x: 3 4 5 6 7
+        // y: 5 5 5 5 5
+
+        if (rightDirection) { //not allowed when before we were moving to the left
             x[0] += DOT_SIZE;
         }
 
@@ -153,16 +195,45 @@ public class Board extends JPanel implements ActionListener {
             y[0] -= DOT_SIZE;
         }
 
+        // 0123456789
+        //0
+        //1
+        //2
+        //3
+        //4    *
+        //5    |--
+        //6
+        // 0123456
+
+        // worm_length=4
+        //    0 1 2 3 4
+        // x: 4 4 5 6 7
+        // y: 4 5 5 5 5
+
         if (downDirection) {
             y[0] += DOT_SIZE;
         }
+        // 0123456789
+        //0
+        //1
+        //2
+        //3
+        //4
+        //5    |--
+        //6    *
+        // 0123456
+
+        // worm_length=4
+        //    0 1 2 3 4
+        // x: 4 4 5 6 7
+        // y: 6 5 5 5 5
     }
 
     private void checkCollision() {
 
-        for (int z = dots; z > 0; z--) {
-
-            if ((z > 4) && (x[0] == x[z]) && (y[0] == y[z])) {
+        for (int z = worm_length; z > 4; z--) {
+            //only interested in the queue of the worm (ignore head+3)
+            if ((x[0] == x[z]) && (y[0] == y[z])) {
                 inGame = false;
             }
         }
@@ -188,12 +259,12 @@ public class Board extends JPanel implements ActionListener {
         }
     }
 
-    private void locateApple() {
-
-        int r = (int) (Math.random() * RAND_POS);
+    private void relocateApple() {
+        Random rand = new Random();
+        int r = rand.nextInt(HORIZONTAL_DOTS);
         apple_x = ((r * DOT_SIZE));
 
-        r = (int) (Math.random() * RAND_POS);
+        r = rand.nextInt(VERTICAL_DOTS);
         apple_y = ((r * DOT_SIZE));
     }
 
@@ -201,7 +272,6 @@ public class Board extends JPanel implements ActionListener {
     public void actionPerformed(ActionEvent e) {
 
         if (inGame) {
-
             checkApple();
             checkCollision();
             move();
@@ -210,6 +280,7 @@ public class Board extends JPanel implements ActionListener {
         repaint();
     }
 
+    //nested class
     private class TAdapter extends KeyAdapter {
 
         @Override
